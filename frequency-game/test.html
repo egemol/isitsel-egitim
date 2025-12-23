@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Audio Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/tone@14.7.77/build/Tone.js"></script>
+</head>
+<body>
+    <h1>Audio Test</h1>
+    <button id="test-btn">Test Audio</button>
+    <div id="status"></div>
+    
+    <script>
+        const testBtn = document.getElementById('test-btn');
+        const status = document.getElementById('status');
+        
+        testBtn.addEventListener('click', async () => {
+            try {
+                status.textContent = 'Starting Tone.js...';
+                await Tone.start();
+                status.textContent = 'Tone.js started. Loading audio...';
+                
+                const player = new Tone.Player().toDestination();
+                await player.load('music/test.wav');
+                
+                status.textContent = 'Audio loaded. Playing...';
+                player.start();
+                
+                player.onstop = () => {
+                    status.textContent = 'Audio finished playing.';
+                    player.dispose();
+                };
+                
+            } catch (error) {
+                status.textContent = 'Error: ' + error.message;
+                console.error('Audio test error:', error);
+            }
+        });
+    </script>
+</body>
+</html> 

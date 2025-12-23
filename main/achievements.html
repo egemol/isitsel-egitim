@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>İşitsel Eğitim - Başarımlar</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container">
+      <div class="nav-content">
+        <a href="index.html" class="nav-logo">
+          <img src="../site-logo.png" alt="Logo">
+          İşitsel Eğitim
+        </a>
+        
+        <ul class="nav-links">
+          <li><a href="index.html" class="nav-link">Ana Sayfa</a></li>
+          <li><a href="leaderboard.html" class="nav-link">Liderlik</a></li>
+          <li><a href="achievements.html" class="nav-link">Başarımlar</a></li>
+        </ul>
+        
+        <div class="nav-auth">
+          <div id="auth-section">
+            <!-- Auth buttons will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="container">
+      <!-- Hero Section -->
+      <section class="hero">
+        <h1>🏆 Başarımlar</h1>
+        <p>Oyunlarda kazandığınız başarımları görüntüleyin ve yeni hedefler belirleyin</p>
+      </section>
+
+      <!-- Achievement Stats -->
+      <div id="achievement-stats" class="profile-stats" style="margin-bottom: 3rem;">
+        <div class="stat-card">
+          <div class="stat-value" id="unlocked-count">0</div>
+          <div class="stat-label">Açılan Başarım</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="total-count">30</div>
+          <div class="stat-label">Toplam Başarım</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="completion-percentage">0%</div>
+          <div class="stat-label">Tamamlanma</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="latest-achievement">-</div>
+          <div class="stat-label">Son Başarım</div>
+        </div>
+      </div>
+
+      <!-- Loading indicator -->
+      <div id="loading" class="loading">
+        <div class="spinner"></div>
+      </div>
+
+      <!-- Achievements Grid -->
+      <div id="achievements-container" style="display: none;">
+        <div class="achievements-grid" id="achievements-grid">
+          <!-- Achievements will be populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Not Logged In Message -->
+      <div id="not-logged-in" class="form-container" style="display: none; text-align: center;">
+        <h2>🔐 Giriş Gerekli</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+          Başarımlarınızı görüntülemek için giriş yapmanız gerekiyor.
+        </p>
+        <a href="login.html" class="btn btn-primary">Giriş Yap</a>
+      </div>
+
+      <!-- Progress Guide -->
+      <div id="progress-guide" style="display: none; margin-top: 3rem;">
+        <div class="form-container">
+          <h3 style="text-align: center; margin-bottom: 1.5rem;">📈 Başarım Rehberi</h3>
+          <div style="color: var(--text-secondary); line-height: 1.6;">
+            <p><strong>🎮 Genel Başarımlar:</strong> İlk oyun, toplam skor hedefleri (100-5000), oyun sayısı hedefleri</p>
+            <p><strong>🎵 Frequency Game:</strong> EQ uzmanlığı ve yüksek skor başarımları</p>
+            <p><strong>🗜️ Compressor Game:</strong> Dinamik kontrol ve kompresyon uzmanlığı</p>
+            <p><strong>⚖️ Balance Game:</strong> Mikser uzmanlığı ve mükemmel denge başarımları</p>
+            <p><strong>🎧 Stereo Game:</strong> Stereo genişlik uzmanlığı başarımları</p>
+            <p><strong>💯 Özel Başarımlar:</strong> Mükemmeliyetçi, yüksek ortalama ve düzenli oyuncu</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script type="module">
+    import { onAuthChange } from './js/auth.js';
+    import { getUserProfile, getUserScores, getAllAchievements } from './js/db.js';
+
+    let currentUser = null;
+
+    // DOM elements
+    const authSection = document.getElementById('auth-section');
+    const loading = document.getElementById('loading');
+    const achievementsContainer = document.getElementById('achievements-container');
+    const achievementsGrid = document.getElementById('achievements-grid');
+    const notLoggedIn = document.getElementById('not-logged-in');
+    const achievementStats = document.getElementById('achievement-stats');
+    const progressGuide = document.getElementById('progress-guide');
+
+    // Helper function to check if achievement is unlocked (handles both array and object formats)
+    function checkIfAchievementUnlocked(userAchievements, achievementId) {
+      if (!userAchievements) return false;
+      
+      if (Array.isArray(userAchievements)) {
+        return userAchievements.includes(achievementId);
+      } else if (typeof userAchievements === 'object') {
+        return userAchievements.hasOwnProperty(achievementId) && userAchievements[achievementId];
+      }
+      
+      return false;
+    }
+
+    // Get achievement unlock date
+    function getAchievementUnlockDate(userAchievements, achievementId) {
+      if (!userAchievements || Array.isArray(userAchievements)) return null;
+      
+      const achievementData = userAchievements[achievementId];
+      if (achievementData && achievementData.unlockedAt) {
+        return new Date(achievementData.unlockedAt).toLocaleDateString('tr-TR', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      }
+      
+      return null;
+    }
+
+    // Auth state listener
+    onAuthChange(async (user) => {
+      currentUser = user;
+      updateAuthSection();
+      
+      if (user) {
+        await loadUserAchievements(user);
+        showAchievements();
+      } else {
+        showNotLoggedIn();
+      }
+    });
+
+    // Listen for score update events from games
+    window.addEventListener('scoreUpdated', async (event) => {
+      console.log('Score update received, refreshing achievements...');
+      if (currentUser) {
+        await loadUserAchievements(currentUser);
+      }
+    });
+
+    // Also listen for postMessage events from iframes
+    window.addEventListener('message', async (event) => {
+      if (event.data && event.data.type === 'scoreUpdated' && currentUser) {
+        console.log('Score update received via postMessage, refreshing achievements...');
+        await loadUserAchievements(currentUser);
+      }
+    });
+
+    // Update auth section
+    function updateAuthSection() {
+      if (currentUser) {
+        authSection.innerHTML = `
+          <a href="profile.html" class="nav-link">👤 Profil</a>
+          <button id="logout-btn" class="btn btn-danger">Çıkış</button>
+        `;
+
+        // Add logout functionality
+        document.getElementById('logout-btn')?.addEventListener('click', async () => {
+          const { logout } = await import('./js/auth.js');
+          await logout();
+          window.location.reload();
+        });
+      } else {
+        authSection.innerHTML = `
+          <a href="login.html" class="btn btn-primary">Giriş Yap</a>
+          <a href="login.html?mode=register" class="btn btn-secondary">Kayıt Ol</a>
+        `;
+      }
+    }
+
+    // Load user achievements
+    async function loadUserAchievements(user) {
+      try {
+        loading.style.display = 'flex';
+
+        const [profile, scores] = await Promise.all([
+          getUserProfile(user.uid),
+          getUserScores(user.uid)
+        ]);
+
+        if (!profile) {
+          console.warn('❌ Kullanıcı profili bulunamadı');
+          showNotLoggedIn();
+          return;
+        }
+
+        const allAchievements = getAllAchievements();
+        const userAchievements = profile.achievements || {};
+
+        console.log('✅ Kullanıcı verileri alındı:', {
+          totalAchievements: allAchievements.length,
+          userAchievements: userAchievements.length,
+          gamesPlayed: scores?.length || 0,
+          totalScore: profile.totalScore || 0
+        });
+
+        // Update stats
+        updateAchievementStats(userAchievements, allAchievements, scores);
+
+        // Display achievements
+        displayAchievements(allAchievements, userAchievements, profile, scores);
+
+      } catch (error) {
+        console.error('❌ Başarımlar yükleme hatası:', error);
+        // Show error message to user
+        const achievementsGrid = document.getElementById('achievements-grid');
+        if (achievementsGrid) {
+          achievementsGrid.innerHTML = `
+            <div style="text-align: center; color: var(--text-secondary); grid-column: 1 / -1; padding: 2rem;">
+              <div style="font-size: 2rem; margin-bottom: 1rem;">⚠️</div>
+              <div>Başarımlar yüklenirken hata oluştu.</div>
+              <div style="font-size: 0.9rem; margin-top: 0.5rem;">Lütfen sayfayı yenileyin.</div>
+            </div>
+          `;
+        }
+      } finally {
+        loading.style.display = 'none';
+      }
+    }
+
+    // Update achievement statistics
+    function updateAchievementStats(userAchievements, allAchievements, scores) {
+      // Handle both array and object formats
+      let unlockedCount = 0;
+      let achievementKeys = [];
+      
+      if (userAchievements) {
+        if (Array.isArray(userAchievements)) {
+          // Old array format
+          unlockedCount = userAchievements.length;
+          achievementKeys = userAchievements;
+        } else if (typeof userAchievements === 'object') {
+          // New object format
+          achievementKeys = Object.keys(userAchievements);
+          unlockedCount = achievementKeys.length;
+        }
+      }
+      
+      const totalCount = allAchievements.length;
+      const completionPercentage = totalCount > 0 ? Math.round((unlockedCount / totalCount) * 100) : 0;
+      
+      // Find latest achievement
+      let latestAchievement = '-';
+      if (achievementKeys.length > 0) {
+        const latestId = achievementKeys[achievementKeys.length - 1];
+        const latest = allAchievements.find(a => a.id === latestId);
+        if (latest) {
+          // Remove emoji from name
+          latestAchievement = latest.name.replace(/^(\p{Emoji}+\s*)/u, '');
+        }
+      }
+
+      // Update stats display with error handling
+      try {
+        document.getElementById('unlocked-count').textContent = unlockedCount;
+        document.getElementById('total-count').textContent = totalCount;
+        document.getElementById('completion-percentage').textContent = `${completionPercentage}%`;
+        document.getElementById('latest-achievement').textContent = latestAchievement;
+
+        console.log('✅ Başarım istatistikleri güncellendi:', {
+          unlockedCount,
+          totalCount,
+          completionPercentage,
+          latestAchievement
+        });
+      } catch (error) {
+        console.error('❌ Başarım istatistikleri güncelleme hatası:', error);
+      }
+    }
+
+    // Display achievements
+    function displayAchievements(allAchievements, userAchievements, profile, scores) {
+      try {
+        // Clear existing content
+        achievementsGrid.innerHTML = '';
+        
+        // Group achievements by game
+        const gameGroups = {
+          'Genel': [],
+          'Frequency Game': [],
+          'Compressor Game': [],
+          'Balance Game': [],
+          'Stereo Game': []
+        };
+        
+        allAchievements.forEach(achievement => {
+          const gameType = achievement.game || 'Genel';
+          if (gameGroups[gameType]) {
+            gameGroups[gameType].push(achievement);
+          } else {
+            gameGroups['Genel'].push(achievement);
+          }
+        });
+
+        for (const [game, achievements] of Object.entries(gameGroups)) {
+          if (achievements.length === 0) continue;
+          
+          const gameSection = document.createElement('div');
+          gameSection.className = 'game-section';
+          gameSection.innerHTML = `
+            <h2 class="game-title">${getGameTypeIcon(game)} ${game}</h2>
+            <div class="achievements-subgrid"></div>
+          `;
+          
+          const grid = gameSection.querySelector('.achievements-subgrid');
+          
+          // Sort achievements: unlocked first, then by difficulty/order
+          const sortedAchievements = [...achievements].sort((a, b) => {
+            const aUnlocked = checkIfAchievementUnlocked(userAchievements, a.id);
+            const bUnlocked = checkIfAchievementUnlocked(userAchievements, b.id);
+            
+            if (aUnlocked && !bUnlocked) return -1;
+            if (!aUnlocked && bUnlocked) return 1;
+            
+            // Both unlocked or both locked, sort by order of appearance in getAllAchievements
+            const aIndex = allAchievements.findIndex(ach => ach.id === a.id);
+            const bIndex = allAchievements.findIndex(ach => ach.id === b.id);
+            return aIndex - bIndex;
+          });
+          
+          sortedAchievements.forEach(achievement => {
+            const isUnlocked = checkIfAchievementUnlocked(userAchievements, achievement.id);
+            const progress = getAchievementProgress(achievement, profile, scores);
+            const progressText = progress || (isUnlocked ? '' : '');
+            
+            // Extract emoji from achievement name
+            const emojiMatch = achievement.name.match(/^(\p{Emoji}+)/u);
+            const emoji = emojiMatch ? emojiMatch[1] : '🏆';
+            const nameWithoutEmoji = achievement.name.replace(/^(\p{Emoji}+\s*)/u, '');
+            
+            // Get unlock date if available
+            const unlockDate = getAchievementUnlockDate(userAchievements, achievement.id);
+            const tooltipText = isUnlocked 
+              ? `Kazanıldı: ${achievement.name}${unlockDate ? ` - ${unlockDate}` : ''}` 
+              : `Henüz kazanılmadı: ${achievement.name}`;
+            
+            const achievementEl = document.createElement('div');
+            achievementEl.className = `achievement-card ${isUnlocked ? 'unlocked' : 'locked'}`;
+            achievementEl.title = tooltipText;
+            achievementEl.innerHTML = `
+              <div class="achievement-icon">${isUnlocked ? emoji : '🔒'}</div>
+              <div class="achievement-content">
+                <h4 class="achievement-name">${nameWithoutEmoji}</h4>
+                <p class="achievement-desc">${achievement.description}</p>
+                ${unlockDate ? `<div class="achievement-date" style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--success-color);">📅 ${unlockDate}</div>` : ''}
+                ${progressText ? `<div class="achievement-progress" style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-secondary);">${progressText}</div>` : ''}
+              </div>
+              ${isUnlocked ? '<div class="achievement-badge">✓</div>' : ''}
+            `;
+            
+            grid.appendChild(achievementEl);
+          });
+          
+          achievementsGrid.appendChild(gameSection);
+        }
+
+        console.log('✅ Başarımlar görüntülendi:', {
+          totalSections: Object.keys(gameGroups).filter(game => gameGroups[game].length > 0).length,
+          unlockedCount: userAchievements ? (Array.isArray(userAchievements) ? userAchievements.length : Object.keys(userAchievements).length) : 0
+        });
+      } catch (error) {
+        console.error('❌ Başarımları görüntüleme hatası:', error);
+        achievementsGrid.innerHTML = `
+          <div style="text-align: center; color: var(--text-secondary); grid-column: 1 / -1; padding: 2rem;">
+            <div style="font-size: 2rem; margin-bottom: 1rem;">⚠️</div>
+            <div>Başarımlar görüntülenirken hata oluştu.</div>
+          </div>
+        `;
+      }
+    }
+    
+    // Get game type icon
+    function getGameTypeIcon(gameType) {
+      const icons = {
+        'Genel': '🎮',
+        'Frequency Game': '🎵',
+        'Compressor Game': '🗜️',
+        'Balance Game': '⚖️',
+        'Stereo Game': '🎧'
+      };
+      return icons[gameType] || '🎮';
+    }
+
+    // Get achievement progress for locked achievements
+    function getAchievementProgress(achievement, profile, scores) {
+      const totalScore = profile?.totalScore || 0;
+      const gamesPlayed = scores?.length || 0;
+      const uniqueGames = [...new Set(scores?.map(s => s.game) || [])].length;
+      const isUnlocked = checkIfAchievementUnlocked(profile?.achievements, achievement.id);
+      
+      // If achievement is already unlocked, no need to show progress
+      if (isUnlocked) return '';
+      
+      // Oyun spesifik sayılar
+      const freqGames = scores?.filter(s => s.game === 'Frequency Game').length || 0;
+      const compGames = scores?.filter(s => s.game === 'Compressor Game').length || 0;
+      const balGames = scores?.filter(s => s.game === 'Balance Game').length || 0;
+      const stereoGames = scores?.filter(s => s.game === 'Stereo Game').length || 0;
+      
+      // En yüksek skorlar (individual fields öncelikli)
+      const freqMaxScore = profile?.frequencyScore || Math.max(...(scores?.filter(s => s.game === 'Frequency Game').map(s => s.score) || [0]));
+      const compMaxScore = profile?.compressorScore || Math.max(...(scores?.filter(s => s.game === 'Compressor Game').map(s => s.score) || [0]));
+      const balMaxScore = profile?.balanceScore || Math.max(...(scores?.filter(s => s.game === 'Balance Game').map(s => s.score) || [0]));
+      const stereoMaxScore = profile?.stereoScore || Math.max(...(scores?.filter(s => s.game === 'Stereo Game').map(s => s.score) || [0]));
+
+      switch (achievement.id) {
+        // Genel başarımlar
+        case 'first-game':
+          return gamesPlayed > 0 ? '' : 'Bir oyun tamamlayın';
+        case 'score-100':
+          return totalScore < 100 ? `${totalScore}/100 XP` : '';
+        case 'score-500':
+          return totalScore < 500 ? `${totalScore}/500 XP` : '';
+        case 'score-1000':
+          return totalScore < 1000 ? `${totalScore}/1000 XP` : '';
+        case 'score-2500':
+          return totalScore < 2500 ? `${totalScore}/2500 XP` : '';
+        case 'score-5000':
+          return totalScore < 5000 ? `${totalScore}/5000 XP` : '';
+        case 'games-10':
+          return gamesPlayed < 10 ? `${gamesPlayed}/10 oyun` : '';
+        case 'games-25':
+          return gamesPlayed < 25 ? `${gamesPlayed}/25 oyun` : '';
+        case 'all-games':
+          return uniqueGames < 4 ? `${uniqueGames}/4 farklı oyun` : '';
+        
+        // Frequency Game başarımları
+        case 'frequency-played':
+          return freqGames > 0 ? '' : 'Frequency oyunu oynayın';
+        case 'frequency-expert':
+          return freqGames < 5 ? `${freqGames}/5 Frequency oyunu` : '';
+        case 'frequency-bronze':
+          return freqMaxScore < 200 ? `En yüksek: ${freqMaxScore}/200 XP` : '';
+        case 'frequency-silver':
+          return freqMaxScore < 400 ? `En yüksek: ${freqMaxScore}/400 XP` : '';
+        case 'frequency-gold':
+          return freqMaxScore < 600 ? `En yüksek: ${freqMaxScore}/600 XP` : '';
+        
+        // Compressor Game başarımları
+        case 'compressor-played':
+          return compGames > 0 ? '' : 'Compressor oyunu oynayın';
+        case 'compressor-expert':
+          return compGames < 5 ? `${compGames}/5 Compressor oyunu` : '';
+        case 'compressor-bronze':
+          return compMaxScore < 200 ? `En yüksek: ${compMaxScore}/200 XP` : '';
+        case 'compressor-silver':
+          return compMaxScore < 400 ? `En yüksek: ${compMaxScore}/400 XP` : '';
+        
+        // Balance Game başarımları
+        case 'balance-played':
+          return balGames > 0 ? '' : 'Balance oyunu oynayın';
+        case 'balance-expert':
+          return balGames < 5 ? `${balGames}/5 Balance oyunu` : '';
+        case 'balance-bronze':
+          return balMaxScore < 200 ? `En yüksek: ${balMaxScore}/200 XP` : '';
+        case 'balance-silver':
+          return balMaxScore < 400 ? `En yüksek: ${balMaxScore}/400 XP` : '';
+        
+        // Stereo Game başarımları
+        case 'stereo-played':
+          return stereoGames > 0 ? '' : 'Stereo oyunu oynayın';
+        case 'stereo-expert':
+          return stereoGames < 5 ? `${stereoGames}/5 Stereo oyunu` : '';
+        case 'stereo-bronze':
+          return stereoMaxScore < 200 ? `En yüksek: ${stereoMaxScore}/200 XP` : '';
+        case 'stereo-silver':
+          return stereoMaxScore < 400 ? `En yüksek: ${stereoMaxScore}/400 XP` : '';
+
+        // Özel başarımlar
+        case 'high-average':
+          const avgScore = gamesPlayed > 0 ? Math.round(totalScore / gamesPlayed) : 0;
+          return avgScore < 300 ? `Ortalama: ${avgScore}/300 XP` : '';
+        
+        default:
+          return '';
+      }
+    }
+
+    // Show achievements
+    function showAchievements() {
+      loading.style.display = 'none';
+      achievementsContainer.style.display = 'block';
+      achievementStats.style.display = 'grid';
+      progressGuide.style.display = 'block';
+      notLoggedIn.style.display = 'none';
+    }
+
+    // Show not logged in message
+    function showNotLoggedIn() {
+      loading.style.display = 'none';
+      achievementsContainer.style.display = 'none';
+      achievementStats.style.display = 'none';
+      progressGuide.style.display = 'none';
+      notLoggedIn.style.display = 'block';
+    }
+
+    console.log('🏆 Başarımlar sayfası yüklendi');
+  </script>
+</body>
+</html> 

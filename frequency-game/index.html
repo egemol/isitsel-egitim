@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>İşitsel EQ Oyun</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <!-- Shared main site CSS for unified theme -->
+  <link rel="stylesheet" href="../main/css/style.css?v=20250721">
+
+  <!-- Tone.js with fixed version -->
+  <script src="https://cdn.jsdelivr.net/npm/tone@14.7.77/build/Tone.js"></script>
+  <link rel="stylesheet" href="style.css?v=20250724-0104">
+</head>
+
+<body>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container">
+      <div class="nav-content">
+        <a href="../main/index.html" class="nav-logo">
+          <img src="../site-logo.png" alt="Logo">
+          İşitsel Eğitim
+        </a>
+
+        <ul class="nav-links">
+          <li><a href="../main/index.html" class="nav-link">Ana Sayfa</a></li>
+          <li><a href="../main/profile.html" class="nav-link">Profilim</a></li>
+          <li><a href="../main/leaderboard.html" class="nav-link">Liderlik</a></li>
+          <li><a href="../main/achievements.html" class="nav-link">Başarımlar</a></li>
+        </ul>
+
+        <div class="nav-auth">
+          <span class="current-game">🎚️ Frequency Game</span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Global Volume Control -->
+  <div class="volume-control">
+    <label for="volume-slider">🔊 Ses Seviyesi</label>
+    <input type="range" id="volume-slider" min="0" max="100" value="80" step="1">
+    <span id="volume-value">80%</span>
+  </div>
+
+  <div class="game-wrapper" id="game-content">
+    <div class="game-container">
+      <header class="game-header">
+        <h1 class="game-title">İşitsel EQ Oyun</h1>
+        <div class="game-stats">
+          <div class="stat-item">
+            <span class="stat-label">Skor</span>
+            <span id="score" class="stat-value">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Tur</span>
+            <span id="round" class="stat-value">1 / 10</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="controls-section">
+        <button id="play-original" class="btn-modern btn-primary">
+          <span class="btn-icon">🎵</span>
+          Orijinal Çal
+        </button>
+        <button id="play-eq" class="btn-modern btn-secondary">
+          <span class="btn-icon">🎛️</span>
+          EQ'lu Çal
+        </button>
+      </div>
+
+      <div class="canvas-section">
+        <div class="canvas-card">
+          <canvas id="eq-canvas" width="900" height="300"></canvas>
+          <div id="eq-hover" class="eq-hover-display"></div>
+        </div>
+      </div>
+
+      <div class="action-section">
+        <button id="stop-audio" class="btn-modern btn-stop">
+          <span class="btn-icon">⏹️</span>
+          Sesi Durdur
+        </button>
+        <button id="submit-guess" class="btn-modern btn-action">
+          <span class="btn-icon">✨</span>
+          Tahmini Gönder
+        </button>
+        <button id="next-question" class="btn-modern btn-next hidden">
+          <span class="btn-icon">⏭️</span>
+          Sonraki Soru
+        </button>
+      </div>
+
+      <div id="result" class="result-display"></div>
+    </div>
+
+    <div id="final-modal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2 class="modal-title">🎉 Oyun Bitti!</h2>
+        </div>
+        <div class="modal-body">
+          <div id="final-score" class="final-score">Skor: 0</div>
+          <div id="final-message" class="final-message">Tebrikler!</div>
+        </div>
+        <div class="modal-footer">
+          <button id="restart-btn" class="btn-modern btn-restart">
+            <span class="btn-icon">🔄</span>
+            Tekrar Oyna
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game content is now visible to all users (guests and logged-in) -->
+  <script type="module">
+    import { auth } from '../main/js/firebase-init.js';
+    import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+    // Show game content immediately
+    document.getElementById('game-content').style.display = 'block';
+
+    // Check auth state for UI updates (but don't block access)
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log('✅ Logged in user:', user.email);
+      } else {
+        console.log('👤 Guest mode - scores will not be saved');
+      }
+    });
+  </script>
+  <script src="main.js?v=20250724-0048"></script>
+</body>
+
+</html>

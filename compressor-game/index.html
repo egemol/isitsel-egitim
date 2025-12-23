@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compressor Ear Training</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <!-- Shared main site CSS -->
+  <link rel="stylesheet" href="../main/css/style.css?v=20250721">
+
+  <!-- Tone.js -->
+  <script src="https://cdn.jsdelivr.net/npm/tone@14.7.77/build/Tone.js"></script>
+  <link rel="stylesheet" href="style.css?v=20250723-0036">
+</head>
+
+<body>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container">
+      <div class="nav-content">
+        <a href="../main/index.html" class="nav-logo">
+          <img src="../site-logo.png" alt="Logo">
+          İşitsel Eğitim
+        </a>
+
+        <ul class="nav-links">
+          <li><a href="../main/index.html" class="nav-link">Ana Sayfa</a></li>
+          <li><a href="../main/profile.html" class="nav-link">Profilim</a></li>
+          <li><a href="../main/leaderboard.html" class="nav-link">Liderlik</a></li>
+          <li><a href="../main/achievements.html" class="nav-link">Başarımlar</a></li>
+        </ul>
+
+        <div class="nav-auth">
+          <span class="current-game">🔊 Compressor Game</span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Global Volume Control -->
+  <div class="volume-control">
+    <label for="volume-slider">🔊 Ses Seviyesi</label>
+    <input type="range" id="volume-slider" min="0" max="100" value="80" step="1">
+    <span id="volume-value">80%</span>
+  </div>
+
+  <div class="game-wrapper" id="game-content">
+    <div class="game-container">
+      <header class="game-header">
+        <h1 class="game-title">🎛️ Compressor Kulak Eğitimi</h1>
+        <div class="game-stats">
+          <div class="stat-item">
+            <span class="stat-label">Skor</span>
+            <span id="score" class="stat-value">0 / 1000</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Tur</span>
+            <span id="round" class="stat-value">1 / 10</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="controls-section">
+        <button id="play-original" class="btn-modern btn-primary">
+          <span class="btn-icon">🎵</span>
+          Orijinal
+        </button>
+        <button id="play-compressed" class="btn-modern btn-secondary">
+          <span class="btn-icon">🗜️</span>
+          Sıkıştırılmış
+        </button>
+        <button id="play-user" class="btn-modern btn-tertiary">
+          <span class="btn-icon">🎚️</span>
+          Senin Ayarın
+        </button>
+      </div>
+
+      <div class="compressor-section">
+        <div class="compressor-card">
+
+          <!-- Professional Compressor Interface -->
+          <div class="plugin-interface">
+
+            <!-- Ratio Control -->
+            <div class="control-group vertical">
+              <h3 class="control-title">Ratio</h3>
+              <div class="fader-container">
+                <input type="range" id="ratio" class="vertical-fader" min="1" max="16" value="2" step="1"
+                  data-display="ratio">
+                <div class="fader-label">
+                  <span id="ratio-value">1:2</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Threshold Control -->
+            <div class="control-group vertical">
+              <h3 class="control-title">Threshold</h3>
+              <div class="fader-container">
+                <input type="range" id="threshold" class="vertical-fader" min="-60" max="0" value="-30" step="1">
+                <div class="fader-label">
+                  <span id="threshold-value">-30dB</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Attack Control -->
+            <div class="control-group vertical">
+              <h3 class="control-title">Attack</h3>
+              <div class="fader-container">
+                <input type="range" id="attack" class="vertical-fader" min="0" max="100" value="10" step="1">
+                <div class="fader-label">
+                  <span id="attack-value">10ms</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Release Control -->
+            <div class="control-group vertical">
+              <h3 class="control-title">Release</h3>
+              <div class="fader-container">
+                <input type="range" id="release" class="vertical-fader" min="10" max="1000" value="100" step="10">
+                <div class="fader-label">
+                  <span id="release-value">100ms</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Makeup Gain Control -->
+            <div class="control-group vertical">
+              <h3 class="control-title">Makeup Gain</h3>
+              <div class="fader-container">
+                <input type="range" id="makeup-gain" class="vertical-fader" min="0" max="12" value="0" step="0.5">
+                <div class="fader-label">
+                  <span id="makeup-value">0.0 dB</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Real-World Gain Reduction Meter -->
+            <div class="control-group vertical">
+              <h3 class="control-title">Gain Reduction</h3>
+              <div class="gr-meter-container">
+                <div class="gr-meter">
+                  <!-- GR Bar fills from 0dB (top) to -20dB (bottom) -->
+                  <div id="gr-bar" class="gr-bar"></div>
+
+                  <!-- Professional GR scale markings (0 to -60dB) -->
+                  <div class="gr-scale">
+                    <span class="scale-mark" data-db="0">0</span>
+                    <span class="scale-mark" data-db="-3">-3</span>
+                    <span class="scale-mark" data-db="-6">-6</span>
+                    <span class="scale-mark" data-db="-12">-12</span>
+                    <span class="scale-mark" data-db="-20">-20</span>
+                    <span class="scale-mark" data-db="-40">-40</span>
+                    <span class="scale-mark" data-db="-60">-60</span>
+                  </div>
+                </div>
+
+                <!-- Digital GR Readout -->
+                <div class="gr-digital-display">
+                  <div class="gr-label">GR</div>
+                  <div id="gr-value">0.0 dB</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Correct Answer Display - Positioned Below Sliders -->
+      <div id="correct-answer" class="correct-answer-display hidden">
+        <h3>✅ Ayar Karşılaştırması</h3>
+        <div class="comparison-table-container">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th>Parametre</th>
+                <th>Senin Ayarın</th>
+                <th>Doğru Cevap</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Ratio</td>
+                <td id="user-ratio" class="user-value">1:4</td>
+                <td id="correct-ratio" class="correct-value">1:2</td>
+              </tr>
+              <tr>
+                <td>Attack</td>
+                <td id="user-attack" class="user-value">90ms</td>
+                <td id="correct-attack" class="correct-value">9ms</td>
+              </tr>
+              <tr>
+                <td>Release</td>
+                <td id="user-release" class="user-value">464ms</td>
+                <td id="correct-release" class="correct-value">443ms</td>
+              </tr>
+              <tr>
+                <td>Makeup</td>
+                <td id="user-makeup" class="user-value">8.9dB</td>
+                <td id="correct-makeup" class="correct-value">1.6dB</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="action-section" style="margin-top: 1rem;">
+        <button id="stop-audio" class="btn-modern btn-stop">
+          <span class="btn-icon">⏹️</span>
+          Sesi Durdur
+        </button>
+        <button id="submit-guess" class="btn-modern btn-action">
+          <span class="btn-icon">✨</span>
+          Onayla
+        </button>
+        <button id="next-question" class="btn-modern btn-next hidden">
+          <span class="btn-icon">⏭️</span>
+          Sonraki Tur
+        </button>
+      </div>
+
+      <div id="result" class="result-display"></div>
+
+      <!-- Compressor Icon -->
+      <div class="compressor-icon">
+        <div class="plugin-window">
+          <div class="plugin-header">COMP</div>
+          <div class="plugin-knobs">
+            <div class="mini-knob"></div>
+            <div class="mini-knob"></div>
+            <div class="mini-knob"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Final Score Modal -->
+    <div id="final-modal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2 class="modal-title">🎉 Oyun Tamamlandı!</h2>
+        </div>
+        <div class="modal-body">
+          <div id="final-score" class="final-score">Skor: 0</div>
+          <div id="final-message" class="final-message">Harika!</div>
+          <div id="final-details" class="final-details"></div>
+        </div>
+        <div class="modal-footer">
+          <button id="restart-btn" class="btn-modern btn-restart">
+            <span class="btn-icon">🔄</span>
+            Tekrar Oyna
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game content is now visible to all users (guests and logged-in) -->
+  <script type="module">
+    import { auth } from '../main/js/firebase-init.js';
+    import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+    // Show game content immediately
+    document.getElementById('game-content').style.display = 'block';
+
+    // Check auth state for UI updates (but don't block access)
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log('✅ Logged in user:', user.email);
+      } else {
+        console.log('👤 Guest mode - scores will not be saved');
+      }
+    });
+  </script>
+  <script src="main.js"></script>
+</body>
+
+</html>

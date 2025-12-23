@@ -1,0 +1,15 @@
+[build]
+  publish = "."
+
+# Ana sayfa yönlendirmesi
+[[redirects]]
+  from = "/"
+  to = "/main/"
+  status = 302
+  force = true
+
+# SPA stili routing için catch-all (opsiyonel)
+# [[redirects]]
+#   from = "/*"
+#   to = "/main/index.html"
+#   status = 200

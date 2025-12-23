@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>İşitsel Eğitim - Liderlik Tablosu</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container">
+      <div class="nav-content">
+        <a href="index.html" class="nav-logo">
+          <img src="../site-logo.png" alt="Logo">
+          İşitsel Eğitim
+        </a>
+        
+        <ul class="nav-links">
+          <li><a href="index.html" class="nav-link">Ana Sayfa</a></li>
+          <li><a href="leaderboard.html" class="nav-link">Liderlik</a></li>
+          <li><a href="achievements.html" class="nav-link">Başarımlar</a></li>
+        </ul>
+        
+        <div class="nav-auth">
+          <div id="auth-section">
+            <!-- Auth buttons will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="container">
+      <!-- Hero Section -->
+      <section class="hero">
+        <h1>🏆 Liderlik Tablosu</h1>
+        <p>En başarılı oyuncuları keşfedin ve kendinizi onlarla karşılaştırın</p>
+      </section>
+
+      <!-- Leaderboard Container -->
+      <div class="leaderboard-container">
+        <!-- Leaderboard Header -->
+        <div class="leaderboard-header">
+          <h2>Sıralama</h2>
+          <select id="game-filter" class="game-filter">
+            <option value="">🎮 Genel Toplam</option>
+            <option value="Frequency Game">🎚️ Frequency Game</option>
+            <option value="Compressor Game">🔊 Compressor Game</option>
+            <option value="Balance Game">⚖️ Balance Game</option>
+            <option value="Stereo Game">🎧 Stereo Game</option>
+          </select>
+        </div>
+
+        <!-- Loading indicator -->
+        <div id="loading" class="loading">
+          <div class="spinner"></div>
+        </div>
+
+        <!-- Leaderboard List -->
+        <div id="leaderboard-list" class="leaderboard-list" style="display: none;">
+          <!-- Leaderboard items will be populated by JavaScript -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="form-container" style="display: none; text-align: center;">
+          <h2>📊 Henüz Veri Yok</h2>
+          <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+            Bu kategori için henüz skor kaydı bulunmuyor.
+          </p>
+          <a href="index.html" class="btn btn-primary">Oyunlara Katıl</a>
+        </div>
+
+        <!-- User Rank Info -->
+        <div id="user-rank-info" class="alert alert-success" style="display: none; margin-top: 2rem;">
+          <span id="user-rank-text"></span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script type="module">
+    import { onAuthChange } from './js/auth.js';
+    import { getLeaderboard, getUserProfile, getUserScores } from './js/db.js';
+
+    let currentUser = null;
+    let currentFilter = '';
+
+    // DOM elements
+    const authSection = document.getElementById('auth-section');
+    const gameFilter = document.getElementById('game-filter');
+    const loading = document.getElementById('loading');
+    const leaderboardList = document.getElementById('leaderboard-list');
+    const emptyState = document.getElementById('empty-state');
+    const userRankInfo = document.getElementById('user-rank-info');
+    const userRankText = document.getElementById('user-rank-text');
+
+    // Auth state listener
+    onAuthChange(async (user) => {
+      currentUser = user;
+      updateAuthSection();
+      await loadLeaderboard();
+    });
+
+    // Game filter handler
+    gameFilter.addEventListener('change', async () => {
+      currentFilter = gameFilter.value;
+      await loadLeaderboard();
+    });
+
+    // Update auth section
+    function updateAuthSection() {
+      if (currentUser) {
+        authSection.innerHTML = `
+          <a href="profile.html" class="nav-link">👤 Profil</a>
+          <button id="logout-btn" class="btn btn-danger">Çıkış</button>
+        `;
+
+        // Add logout functionality
+        document.getElementById('logout-btn')?.addEventListener('click', async () => {
+          const { logout } = await import('./js/auth.js');
+          await logout();
+          window.location.reload();
+        });
+      } else {
+        authSection.innerHTML = `
+          <a href="login.html" class="btn btn-primary">Giriş Yap</a>
+          <a href="login.html?mode=register" class="btn btn-secondary">Kayıt Ol</a>
+        `;
+      }
+    }
+
+    // Load leaderboard data
+    async function loadLeaderboard() {
+      try {
+        showLoading();
+
+        const leaderboardData = await getLeaderboard(currentFilter, 20);
+
+        if (leaderboardData.length === 0) {
+          showEmptyState();
+          return;
+        }
+
+        displayLeaderboard(leaderboardData);
+        
+        if (currentUser) {
+          await updateUserRank(leaderboardData);
+        }
+
+      } catch (error) {
+        console.error('Liderlik tablosu yükleme hatası:', error);
+        showEmptyState();
+      }
+    }
+
+    // Display leaderboard
+    async function displayLeaderboard(data) {
+      const isGameSpecific = !!currentFilter;
+      
+      // Data is already sorted by the database query, no need to sort again
+      
+      let leaderboardHTML = '';
+
+      for (let i = 0; i < data.length; i++) {
+        const item = data[i];
+        const rank = i + 1;
+        const rankClass = getRankClass(rank);
+        
+        let username = 'Anonim Kullanıcı';
+        let userEmail = '';
+        
+        if (isGameSpecific) {
+          // For game-specific leaderboards, try to get user email
+          try {
+            if (item.uid) {
+              const userProfile = await getUserProfile(item.uid);
+              if (userProfile && userProfile.email) {
+                userEmail = userProfile.email;
+                username = userEmail.split('@')[0]; // Use part before @
+              }
+            }
+          } catch (error) {
+            console.error('User profile fetch error:', error);
+          }
+        } else {
+          // For general leaderboard, use email from the user document
+          if (item.email) {
+            userEmail = item.email;
+            username = item.email.split('@')[0];
+          } else if (item.userEmail) {
+            // Fallback to userEmail if email is not available
+            userEmail = item.userEmail;
+            username = userEmail.split('@')[0];
+          }
+        }
+
+        // Get the appropriate score based on the view
+        const score = isGameSpecific ? (item.score || 0) : (item.totalScore || item.displayScore || 0);
+        const scoreLabel = isGameSpecific ? 'Skor' : 'Toplam XP';
+
+        // Format the rank with proper suffix (1st, 2nd, 3rd, etc.)
+        const rankSuffix = rank === 1 ? 'st' : rank === 2 ? 'nd' : rank === 3 ? 'rd' : 'th';
+        
+        leaderboardHTML += `
+          <div class="leaderboard-item ${currentUser && (currentUser.uid === item.uid || currentUser.uid === item.id) ? 'current-user' : ''}">
+            <div class="rank ${rankClass}" title="${rank}.">
+              ${rank}.
+            </div>
+            <div class="user-info">
+              <div class="username">${username}</div>
+              ${userEmail ? `<div class="user-email">${userEmail}</div>` : ''}
+            </div>
+            <div class="score" title="${scoreLabel}">${score.toLocaleString()} XP</div>
+          </div>
+        `;
+      }
+
+      leaderboardList.innerHTML = leaderboardHTML;
+      showLeaderboard();
+    }
+
+    // Update user rank info
+    async function updateUserRank(leaderboardData) {
+      if (!currentUser) return;
+
+      const userIndex = leaderboardData.findIndex(item => 
+        item.uid === currentUser.uid || item.id === currentUser.uid
+      );
+
+      if (userIndex !== -1) {
+        const rank = userIndex + 1;
+        const gameText = currentFilter ? currentFilter : 'genel sıralamada';
+        userRankText.textContent = `🎯 ${gameText} ${rank}. sıradasınız!`;
+        userRankInfo.style.display = 'block';
+      } else {
+        userRankInfo.style.display = 'none';
+      }
+    }
+
+    // Get rank class for styling
+    function getRankClass(rank) {
+      if (rank === 1) return 'gold';
+      if (rank === 2) return 'silver';
+      if (rank === 3) return 'bronze';
+      return '';
+    }
+
+    // Listen for score update events from games
+    window.addEventListener('scoreUpdated', (event) => {
+      console.log('Score update received, refreshing leaderboard...');
+      loadLeaderboard(currentFilter);
+    });
+
+    // Also listen for postMessage events from iframes
+    window.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'scoreUpdated') {
+        console.log('Score update received via postMessage, refreshing leaderboard...');
+        loadLeaderboard(currentFilter);
+      }
+    });
+
+    // Show loading state
+    function showLoading() {
+      loading.style.display = 'flex';
+      leaderboardList.style.display = 'none';
+      emptyState.style.display = 'none';
+      userRankInfo.style.display = 'none';
+    }
+
+    // Show leaderboard
+    function showLeaderboard() {
+      loading.style.display = 'none';
+      leaderboardList.style.display = 'block';
+      emptyState.style.display = 'none';
+    }
+
+    // Show empty state
+    function showEmptyState() {
+      loading.style.display = 'none';
+      leaderboardList.style.display = 'none';
+      emptyState.style.display = 'block';
+      userRankInfo.style.display = 'none';
+    }
+
+    // Add current user highlighting CSS
+    const style = document.createElement('style');
+    style.textContent = `
+      .leaderboard-item.current-user {
+        background: rgba(79, 70, 229, 0.1);
+        border: 1px solid var(--accent-primary);
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Initial load
+    console.log('🏆 Liderlik tablosu yüklendi');
+  </script>
+</body>
+</html> 

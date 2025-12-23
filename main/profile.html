@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>İşitsel Eğitim - Profil</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container">
+      <div class="nav-content">
+        <a href="index.html" class="nav-logo">
+          <img src="../site-logo.png" alt="Logo">
+          İşitsel Eğitim
+        </a>
+
+        <ul class="nav-links">
+          <li><a href="index.html" class="nav-link">Ana Sayfa</a></li>
+          <li><a href="leaderboard.html" class="nav-link">Liderlik</a></li>
+          <li><a href="achievements.html" class="nav-link">Başarımlar</a></li>
+        </ul>
+
+        <div class="nav-auth">
+          <a href="index.html" class="btn btn-secondary">← Ana Sayfa</a>
+          <button id="logout-btn" class="btn btn-danger">Çıkış</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="container">
+      <!-- Loading indicator -->
+      <div id="loading" class="loading">
+        <div class="spinner"></div>
+      </div>
+
+      <!-- Profile Content -->
+      <div id="profile-content" class="profile-container" style="display: none;">
+        <!-- Profile Header -->
+        <div class="profile-header">
+          <div class="profile-avatar">👤</div>
+          <h1 id="user-email">Yükleniyor...</h1>
+          <p id="user-since">Üyelik tarihi yükleniyor...</p>
+        </div>
+
+        <!-- User Statistics -->
+        <div class="profile-stats">
+          <div class="stat-card">
+            <div class="stat-value" id="total-score">0</div>
+            <div class="stat-label">Toplam Skor</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="games-played">0</div>
+            <div class="stat-label">Oynanan Oyun</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="achievements-count">0</div>
+            <div class="stat-label">Başarım</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="last-played">-</div>
+            <div class="stat-label">Son Oyun</div>
+          </div>
+        </div>
+
+        <!-- Game Scores -->
+        <div style="margin-top: 3rem;">
+          <h2 style="margin-bottom: 1.5rem; text-align: center;">🎮 Oyun Başına XP Skorları</h2>
+          <div class="profile-stats">
+            <div class="stat-card">
+              <div class="stat-value" id="freq-score">0</div>
+              <div class="stat-label">🎵 Frequency</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="comp-score">0</div>
+              <div class="stat-label">🗜️ Compressor</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="balance-score">0</div>
+              <div class="stat-label">⚖️ Balance</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="stereo-score">0</div>
+              <div class="stat-label">🎧 Stereo</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Achievements -->
+        <div style="margin-top: 3rem;">
+          <h2 style="margin-bottom: 1.5rem; text-align: center;">🏆 Son Başarımlar</h2>
+          <div id="recent-achievements" class="achievements-grid">
+            <!-- Recent achievements will be populated by JavaScript -->
+          </div>
+        </div>
+
+        <!-- Game History -->
+        <div style="margin-top: 3rem;">
+          <h2 style="margin-bottom: 1.5rem; text-align: center;">📊 Oyun Geçmişi</h2>
+
+          <!-- Game Filter -->
+          <div style="text-align: center; margin-bottom: 2rem;">
+            <select id="game-filter" class="game-filter">
+              <option value="">Tüm Oyunlar</option>
+              <option value="Frequency Game">Frequency Game</option>
+              <option value="Compressor Game">Compressor Game</option>
+              <option value="Balance Game">Balance Game</option>
+              <option value="Stereo Game">Stereo Game</option>
+            </select>
+          </div>
+
+          <!-- Game History List -->
+          <div id="game-history" class="leaderboard-list">
+            <!-- Game history will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Not Logged In Message -->
+      <div id="not-logged-in" class="form-container" style="display: none; text-align: center;">
+        <h1>🔐 Giriş Gerekli</h1>
+        <p style="margin-bottom: 2rem; color: var(--text-secondary);">
+          Profilinizi görüntülemek için giriş yapmanız gerekiyor.
+        </p>
+        <a href="login.html" class="btn btn-primary">Giriş Yap</a>
+      </div>
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script type="module">
+    import { onAuthChange, logout } from './js/auth.js';
+    import { getUserProfile, getUserScores, getAllAchievements, getUserGameScores } from './js/db.js';
+
+    let currentUser = null;
+    let allScores = [];
+
+    // DOM elements
+    const loading = document.getElementById('loading');
+    const profileContent = document.getElementById('profile-content');
+    const notLoggedIn = document.getElementById('not-logged-in');
+    const logoutBtn = document.getElementById('logout-btn');
+    const gameFilter = document.getElementById('game-filter');
+
+    // Auth state listener
+    onAuthChange(async (user) => {
+      if (user) {
+        currentUser = user;
+        await loadUserProfile(user);
+        showProfile();
+      } else {
+        currentUser = null;
+        showNotLoggedIn();
+      }
+    });
+
+    // Logout handler
+    logoutBtn.addEventListener('click', async () => {
+      await logout();
+      window.location.href = 'index.html';
+    });
+
+    // Game filter handler
+    gameFilter.addEventListener('change', () => {
+      filterGameHistory();
+    });
+
+    // Listen for score update events from games
+    window.addEventListener('scoreUpdated', async (event) => {
+      console.log('Score update received, refreshing profile...');
+      if (currentUser) {
+        await loadUserProfile(currentUser);
+      }
+    });
+
+    // Also listen for postMessage events from iframes
+    window.addEventListener('message', async (event) => {
+      if (event.data && event.data.type === 'scoreUpdated' && currentUser) {
+        console.log('Score update received via postMessage, refreshing profile...');
+        await loadUserProfile(currentUser);
+      }
+    });
+
+    // Load user profile data
+    async function loadUserProfile(user) {
+      try {
+        loading.style.display = 'flex';
+
+        const [profile, scores, gameScores] = await Promise.all([
+          getUserProfile(user.uid),
+          getUserScores(user.uid),
+          getUserGameScores(user.uid)
+        ]);
+
+        allScores = scores;
+
+        if (profile) {
+          // Update profile info
+          document.getElementById('user-email').textContent = user.email;
+          const memberSince = profile.createdAt ? formatDate(profile.createdAt) : 'Bilinmiyor';
+          document.getElementById('user-since').textContent = `Üye olma: ${memberSince}`;
+
+          // Calculate individual game scores
+          const freqScore = profile.frequencyScore || gameScores['Frequency Game'] || 0;
+          const compScore = profile.compressorScore || gameScores['Compressor Game'] || 0;
+          const balanceScore = profile.balanceScore || gameScores['Balance Game'] || 0;
+          const stereoScore = profile.stereoScore || gameScores['Stereo Game'] || 0;
+
+          // Calculate proper total score as sum of best individual scores
+          const calculatedTotal = freqScore + compScore + balanceScore + stereoScore;
+
+          // Update stats (using XP terminology)
+          document.getElementById('total-score').textContent = `${calculatedTotal} XP`;
+          document.getElementById('games-played').textContent = profile.gamesPlayed || scores.length || 0;
+
+          // Handle both array and object formats for achievements count
+          let achievementsCount = 0;
+          if (profile.achievements) {
+            if (Array.isArray(profile.achievements)) {
+              achievementsCount = profile.achievements.length;
+            } else if (typeof profile.achievements === 'object') {
+              achievementsCount = Object.keys(profile.achievements).length;
+            }
+          }
+          document.getElementById('achievements-count').textContent = achievementsCount;
+
+          // Format last played date properly
+          let lastPlayedText = '-';
+          if (profile.lastPlayed) {
+            if (typeof profile.lastPlayed === 'string') {
+              lastPlayedText = profile.lastPlayed;
+            } else if (profile.lastPlayed.seconds) {
+              lastPlayedText = formatDate(profile.lastPlayed);
+            }
+          }
+          document.getElementById('last-played').textContent = lastPlayedText;
+
+          // Update game scores with max possible scores for context (using XP terminology)
+          document.getElementById('freq-score').textContent = `${freqScore} XP`;
+          document.getElementById('comp-score').textContent = `${compScore} XP`;
+          document.getElementById('balance-score').textContent = `${balanceScore} XP`;
+          document.getElementById('stereo-score').textContent = `${stereoScore} XP`;
+
+          // Load recent achievements
+          loadRecentAchievements(profile.achievements || []);
+
+          // Load game history - use gamesHistory from profile if available, fallback to scores
+          const gameHistory = profile.gamesHistory || scores;
+          loadGameHistory(gameHistory, profile.gamesHistory ? 'gamesHistory' : 'scores');
+        } else {
+          // Profil yoksa varsayılan değerler
+          document.getElementById('user-email').textContent = user.email;
+          document.getElementById('user-since').textContent = 'Üye olma: Bilinmiyor';
+          document.getElementById('total-score').textContent = '0';
+          document.getElementById('games-played').textContent = '0';
+          document.getElementById('achievements-count').textContent = '0';
+          document.getElementById('last-played').textContent = '-';
+          document.getElementById('freq-score').textContent = '0';
+          document.getElementById('comp-score').textContent = '0';
+          document.getElementById('balance-score').textContent = '0';
+          document.getElementById('stereo-score').textContent = '0';
+        }
+      } catch (error) {
+        console.error('Profil yükleme hatası:', error);
+      } finally {
+        loading.style.display = 'none';
+      }
+    }
+
+    // Load recent achievements
+    function loadRecentAchievements(userAchievements) {
+      const allAchievements = getAllAchievements();
+      const container = document.getElementById('recent-achievements');
+
+      // Eğer achievements object formatındaysa, key'leri al ve son 3'ünü seç
+      let achievementIds = [];
+      if (userAchievements && typeof userAchievements === 'object') {
+        if (Array.isArray(userAchievements)) {
+          // Array formatı (eski veriler)
+          achievementIds = userAchievements.slice(-3);
+        } else {
+          // Object formatı (yeni veriler)
+          achievementIds = Object.keys(userAchievements).slice(-3);
+        }
+      }
+
+      if (achievementIds.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; color: var(--text-secondary); grid-column: 1 / -1; padding: 2rem;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🏆</div>
+            <div style="font-size: 1.1rem; margin-bottom: 0.5rem;">Henüz hiç başarım kazanmadınız</div>
+            <div style="font-size: 0.9rem;">Oyunlara katılarak başarımlar kazanabilirsiniz!</div>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = achievementIds.map(achievementId => {
+        const achievement = allAchievements.find(a => a.id === achievementId);
+        if (!achievement) {
+          console.warn('❌ Başarım bulunamadı:', achievementId);
+          return '';
+        }
+
+        // Extract emoji from achievement name
+        const emojiMatch = achievement.name.match(/^(\p{Emoji}+)/u);
+        const emoji = emojiMatch ? emojiMatch[1] : '🏆';
+        const nameWithoutEmoji = achievement.name.replace(/^(\p{Emoji}+\s*)/u, '');
+
+        // Get unlock date if available
+        const achievementData = (typeof userAchievements === 'object' && !Array.isArray(userAchievements))
+          ? userAchievements[achievementId]
+          : null;
+        const unlockedAt = achievementData?.unlockedAt ? new Date(achievementData.unlockedAt).toLocaleDateString('tr-TR') : '';
+
+        return `
+          <div class="achievement-card unlocked" title="Kazanılan başarım: ${achievement.name}${unlockedAt ? ` - ${unlockedAt}` : ''}">
+            <div class="achievement-icon">${emoji}</div>
+            <div class="achievement-content">
+              <div class="achievement-name">${nameWithoutEmoji}</div>
+              <div class="achievement-description">${achievement.description}</div>
+              ${unlockedAt ? `<div class="achievement-date" style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">${unlockedAt}</div>` : ''}
+            </div>
+            <div class="achievement-badge">✓</div>
+          </div>
+        `;
+      }).join('');
+
+      console.log('✅ Son başarımlar yüklendi:', achievementIds.length);
+    }
+
+    // Load game history
+    function loadGameHistory(historyData, dataType = 'scores') {
+      const container = document.getElementById('game-history');
+
+      if (!historyData || historyData.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+            Henüz hiç oyun oynamadınız. <a href="index.html" class="nav-link">Oyunlara katılın!</a>
+          </div>
+        `;
+        return;
+      }
+
+      // Sort by date (newest first)
+      const sortedData = [...historyData].sort((a, b) => {
+        const dateA = dataType === 'gamesHistory' ? new Date(a.date) : (a.date?.seconds ? new Date(a.date.seconds * 1000) : new Date(a.date));
+        const dateB = dataType === 'gamesHistory' ? new Date(b.date) : (b.date?.seconds ? new Date(b.date.seconds * 1000) : new Date(b.date));
+        return dateB - dateA;
+      });
+
+      container.innerHTML = sortedData.map((gameData, index) => {
+        const gameIcon = getGameIcon(gameData.game);
+        const date = dataType === 'gamesHistory' ? formatGameHistoryDate(gameData.date) : formatDate(gameData.date);
+        const isNewRecord = dataType === 'gamesHistory' && gameData.isNewRecord;
+
+        return `
+          <div class="leaderboard-item">
+            <div class="rank">${gameIcon}</div>
+            <div class="user-info">
+              <div class="username">
+                ${gameData.game}
+                ${isNewRecord ? '<span style="color: #10b981; font-size: 0.8rem; margin-left: 0.5rem;">🆕 Yeni Rekor!</span>' : ''}
+              </div>
+              <div class="user-score">${date}</div>
+            </div>
+            <div class="score">${gameData.score} XP</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Filter game history
+    function filterGameHistory() {
+      const selectedGame = gameFilter.value;
+
+      // Use gamesHistory from current user profile if available
+      if (currentUser) {
+        getUserProfile(currentUser.uid).then(profile => {
+          const gameHistory = profile?.gamesHistory || allScores;
+          const dataType = profile?.gamesHistory ? 'gamesHistory' : 'scores';
+
+          const filteredData = selectedGame
+            ? gameHistory.filter(item => item.game === selectedGame)
+            : gameHistory;
+
+          loadGameHistory(filteredData, dataType);
+        }).catch(error => {
+          console.error('❌ Oyun geçmişi filtreleme hatası:', error);
+          // Fallback to scores data
+          const filteredScores = selectedGame
+            ? allScores.filter(score => score.game === selectedGame)
+            : allScores;
+          loadGameHistory(filteredScores, 'scores');
+        });
+      } else {
+        // Fallback to scores data
+        const filteredScores = selectedGame
+          ? allScores.filter(score => score.game === selectedGame)
+          : allScores;
+        loadGameHistory(filteredScores, 'scores');
+      }
+    }
+
+    // Get game icon
+    function getGameIcon(gameName) {
+      const icons = {
+        'Frequency Game': '🎚️',
+        'Compressor Game': '🔊',
+        'Balance Game': '⚖️',
+        'Stereo Game': '🎧'
+      };
+      return icons[gameName] || '🎮';
+    }
+
+    // Format date in DD.MM.YYYY HH:MM format (Turkish style)
+    function formatDate(timestamp) {
+      if (!timestamp) return 'Tarih bilinmiyor';
+
+      try {
+        const date = timestamp.seconds
+          ? new Date(timestamp.seconds * 1000)
+          : new Date(timestamp);
+
+        // Check for invalid date
+        if (isNaN(date.getTime())) {
+          console.warn('Invalid date detected:', timestamp);
+          return 'Tarih bilinmiyor';
+        }
+
+        // Format as DD.MM.YYYY HH:MM
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+
+        return `${day}.${month}.${year} ${hours}:${minutes}`;
+      } catch (error) {
+        console.error('Date formatting error:', error);
+        return 'Tarih bilinmiyor';
+      }
+    }
+
+    // Format date for game history entries (DD.MM.YYYY HH:MM format)
+    function formatGameHistoryDate(dateInput) {
+      if (!dateInput) return 'Tarih bilinmiyor';
+
+      try {
+        const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
+
+        // Check for invalid date
+        if (isNaN(date.getTime())) {
+          console.warn('Invalid game history date detected:', dateInput);
+          return 'Tarih bilinmiyor';
+        }
+
+        // Format as DD.MM.YYYY HH:MM
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+
+        return `${day}.${month}.${year} ${hours}:${minutes}`;
+      } catch (error) {
+        console.error('Game history date formatting error:', error);
+        return 'Tarih bilinmiyor';
+      }
+    }
+
+    // Show profile content
+    function showProfile() {
+      loading.style.display = 'none';
+      profileContent.style.display = 'block';
+      notLoggedIn.style.display = 'none';
+    }
+
+    // Show not logged in message
+    function showNotLoggedIn() {
+      loading.style.display = 'none';
+      profileContent.style.display = 'none';
+      notLoggedIn.style.display = 'block';
+    }
+
+    console.log('👤 Profil sayfası yüklendi');
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>İşitsel Eğitim - Ana Sayfa</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container">
+      <div class="nav-content">
+        <a href="index.html" class="nav-logo">
+          <img src="../site-logo.png" alt="Logo">
+          İşitsel Eğitim
+        </a>
+
+        <ul class="nav-links">
+          <li><a href="index.html" class="nav-link">Ana Sayfa</a></li>
+          <li><a href="leaderboard.html" class="nav-link">Liderlik</a></li>
+          <li><a href="achievements.html" class="nav-link">Başarımlar</a></li>
+        </ul>
+
+        <div class="nav-auth">
+          <div id="auth-section">
+            <!-- Auth buttons will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="container">
+      <!-- Hero Section -->
+      <section class="hero">
+        <h1>İşitsel Eğitim Merkezi</h1>
+        <p> Müzik teknolojilerini interaktif oyunlarla öğrenin. Kulak eğitimi, ses dengesi ve frekans analizi
+          becerilerinizi geliştirin.</p>
+      </section>
+
+      <!-- Welcome Message -->
+      <div id="welcome-message" class="alert alert-success" style="display: none;">
+        <span id="welcome-text"></span>
+      </div>
+
+      <!-- Games Grid -->
+      <section class="games-grid">
+        <!-- Frequency Game -->
+        <div class="game-card">
+          <div class="game-icon">🎚️</div>
+          <h2 class="game-title">Frequency Game</h2>
+          <p class="game-description">
+            EQ analizi yaparak hangi frekansın yükseltildiğini tahmin edin.
+            Kulak eğitimi ve frekans tanıma becerilerinizi geliştirir.
+          </p>
+          <a href="../frequency-game/index.html?v=1" class="btn btn-primary">
+            🎮 Oyna
+          </a>
+        </div>
+
+        <!-- Compressor Game -->
+        <div class="game-card">
+          <div class="game-icon">🔊</div>
+          <h2 class="game-title">Compressor Game</h2>
+          <p class="game-description">
+            Farklı kompresör ayarlarını dinleyerek hangi parametrenin değiştiğini bulun.
+            Dinamik işleme ve ses kontrol teknikleri öğrenin.
+          </p>
+          <a href="../compressor-game/index.html?v=1" class="btn btn-primary">
+            🎮 Oyna
+          </a>
+        </div>
+
+        <!-- Balance Game -->
+        <div class="game-card">
+          <div class="game-icon">⚖️</div>
+          <h2 class="game-title">Balance Game</h2>
+          <p class="game-description">
+            Çok kanallı ses mikslerini dinleyerek hangi enstrümanın seviyesinin değiştiğini tespit edin.
+            Mixing ve ses dengesi becerilerinizi artırın.
+          </p>
+          <a href="../balance-game/index.html?v=1" class="btn btn-primary">
+            🎮 Oyna
+          </a>
+        </div>
+
+        <!-- Stereo Game -->
+        <div class="game-card">
+          <div class="game-icon">🎧</div>
+          <h2 class="game-title">Stereo Game</h2>
+          <p class="game-description">
+            Stereo görüntüdeki değişiklikleri fark ederek hangi ses kaynağının pozisyonunun değiştiğini bulun.
+
+          </p>
+          <a href="../stereo-game/index.html?v=1" class="btn btn-primary">
+            🎮 Oyna
+          </a>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Loading indicator -->
+  <div id="loading" class="loading" style="display: none;">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Scripts -->
+  <script type="module">
+    import { onAuthChange } from './js/auth.js';
+
+    let currentUser = null;
+
+    // DOM elements
+    const authSection = document.getElementById('auth-section');
+    const welcomeMessage = document.getElementById('welcome-message');
+    const welcomeText = document.getElementById('welcome-text');
+    const loading = document.getElementById('loading');
+
+    // Auth state listener
+    onAuthChange(async (user) => {
+      loading.style.display = 'flex';
+
+      if (user) {
+        currentUser = user;
+        await updateUserInterface(user);
+        showWelcomeMessage(user.email);
+      } else {
+        currentUser = null;
+        showGuestInterface();
+        hideWelcomeMessage();
+      }
+
+      loading.style.display = 'none';
+    });
+
+    // Update interface for logged in user
+    async function updateUserInterface(user) {
+      // Update auth section
+      authSection.innerHTML = `
+        <a href="profile.html" class="nav-link">👤 Profil</a>
+        <button id="logout-btn" class="btn btn-danger">Çıkış</button>
+      `;
+
+      // Add logout functionality
+      document.getElementById('logout-btn').addEventListener('click', async () => {
+        const { logout } = await import('./js/auth.js');
+        await logout();
+        window.location.reload();
+      });
+    }
+
+    // Show interface for guest users
+    function showGuestInterface() {
+      authSection.innerHTML = `
+        <a href="login.html" class="btn btn-primary">Giriş Yap</a>
+        <a href="login.html?mode=register" class="btn btn-secondary">Kayıt Ol</a>
+      `;
+    }
+
+    // Show welcome message
+    function showWelcomeMessage(email) {
+      welcomeText.textContent = `Hoş geldin, ${email}! 🎉`;
+      welcomeMessage.style.display = 'block';
+    }
+
+    // Hide welcome message
+    function hideWelcomeMessage() {
+      welcomeMessage.style.display = 'none';
+    }
+
+    // Initialize the page
+    console.log('🏠 Ana sayfa yüklendi');
+  </script>
+</body>
+
+</html>
