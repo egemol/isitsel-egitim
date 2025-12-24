@@ -1026,6 +1026,86 @@ eqCanvas.addEventListener('click', (e) => {
   }
 });
 
+// ===== TOUCH EVENT SUPPORT FOR MOBILE =====
+function getTouchPos(touch, canvas) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = (canvas.width / (window.devicePixelRatio || 1)) / rect.width;
+  const scaleY = (canvas.height / (window.devicePixelRatio || 1)) / rect.height;
+  return {
+    x: (touch.clientX - rect.left) * scaleX,
+    y: (touch.clientY - rect.top) * scaleY
+  };
+}
+
+eqCanvas.addEventListener('touchstart', (e) => {
+  if (!canvasEnabled || hasGuessed) return;
+  e.preventDefault(); // Prevent scrolling
+  ensureToneStarted();
+
+  const touch = e.touches[0];
+  const touchPos = getTouchPos(touch, eqCanvas);
+  const canvasWidth = eqCanvas.clientWidth;
+
+  const bandIndex = getBandIndexFromClick(touchPos.x, canvasWidth);
+  hoverBandIndex = bandIndex;
+
+  if (bandIndex !== null) {
+    const band = FREQUENCY_BANDS[bandIndex];
+    eqHover.textContent = `${band.label} (${band.min}-${band.max} Hz)`;
+
+    // Set user guess on touch
+    userGuess = { freq: band.center, gain: boostedGain };
+    selectedBandIndex = bandIndex;
+  }
+
+  drawFrequencyBands({
+    selectedFreq: userGuess?.freq,
+    answerFreq: boostedFrequency,
+    showAnswer: hasGuessed,
+    hoveredBand: bandIndex
+  });
+}, { passive: false });
+
+eqCanvas.addEventListener('touchmove', (e) => {
+  if (!canvasEnabled || hasGuessed) return;
+  e.preventDefault(); // Prevent scrolling
+
+  const touch = e.touches[0];
+  const touchPos = getTouchPos(touch, eqCanvas);
+  const canvasWidth = eqCanvas.clientWidth;
+
+  const bandIndex = getBandIndexFromClick(touchPos.x, canvasWidth);
+  hoverBandIndex = bandIndex;
+
+  if (bandIndex !== null) {
+    const band = FREQUENCY_BANDS[bandIndex];
+    eqHover.textContent = `${band.label} (${band.min}-${band.max} Hz)`;
+
+    // Update user guess as finger moves
+    userGuess = { freq: band.center, gain: boostedGain };
+    selectedBandIndex = bandIndex;
+  }
+
+  drawFrequencyBands({
+    selectedFreq: userGuess?.freq,
+    answerFreq: boostedFrequency,
+    showAnswer: hasGuessed,
+    hoveredBand: bandIndex
+  });
+}, { passive: false });
+
+eqCanvas.addEventListener('touchend', (e) => {
+  if (!canvasEnabled) return;
+  hoverBandIndex = null;
+
+  drawFrequencyBands({
+    selectedFreq: userGuess?.freq,
+    answerFreq: boostedFrequency,
+    showAnswer: hasGuessed,
+    hoveredBand: null
+  });
+}, { passive: true });
+
 submitGuessBtn.addEventListener('click', () => {
   if (isGameOver || !userGuess || hasGuessed) return;
 
